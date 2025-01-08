@@ -5,7 +5,7 @@ import json
 app = Flask(__name__)
 
 # Caminho para o diretório de imagens
-IMAGES_DIR = 'known_faces'
+IMAGES_DIR = 'upload'
 DATA_FILE = 'image_data.json'  # Arquivo JSON com os dados falsos
 
 # Verifica se o diretório de imagens existe
