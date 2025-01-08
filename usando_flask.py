@@ -14,23 +14,18 @@ if not os.path.exists(IMAGES_DIR):
 
 # Dados falsos para as imagens
 image_data = {
-    "annanda_4.jpg": {
-        "idade": 25,
-        "profissao": "Engenheiro",
-        "local": "São Paulo",
-        "interesses": ["Tecnologia", "Inovação", "Robótica"]
+    1: {
+       "imagem":"",
+       "nome":,
     },
-    "gustavo_0.jpg": {
-        "idade": 30,
-        "profissao": "Médico",
-        "local": "Rio de Janeiro",
-        "interesses": ["Saúde", "Tecnologia", "Correr"]
+    2: {
+        "imagem":"",
+       "nome":,
     },
-    "ana_0.jpg": {
-        "idade": 22,
-        "profissao": "Designer",
-        "local": "Belo Horizonte",
-        "interesses": ["Design Gráfico", "Arte", "Fotografia"]
+    3: {
+        "imagem":"",
+       "nome":,
+        
     }
 }
 
