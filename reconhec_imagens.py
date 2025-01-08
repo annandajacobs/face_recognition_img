@@ -7,7 +7,7 @@ from io import BytesIO
 from PIL import Image
 
 # Configuração dos diretórios
-KNOWN_FACES_DIR = 'known_faces'
+KNOWN_FACES_DIR = 'base_de_dados'
 
 if not os.path.exists(KNOWN_FACES_DIR):
     os.makedirs(KNOWN_FACES_DIR)
