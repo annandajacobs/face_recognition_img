@@ -3,7 +3,7 @@ import os
 import face_recognition
 
 # Configuração dos diretórios
-KNOWN_FACES_DIR = 'base_de_dados'
+KNOWN_FACES_DIR = 'images'
 
 if not os.path.exists(KNOWN_FACES_DIR):
     os.makedirs(KNOWN_FACES_DIR)

@@ -7,15 +7,15 @@ app = Flask(__name__)
 # Dados falsos das imagens
 image_data = {
     1: {
-       "imagem": "https://raw.githubusercontent.com/annandajacobs/face_recognition_img/refs/heads/luana/images/pessoa.jpeg",
+       "imagem": "",
        "nome": "Gustavo",
     },
     2: {
-        "imagem": "https://raw.githubusercontent.com/annandajacobs/face_recognition_img/refs/heads/luana/images/pessoa2.jpg",
+        "imagem": "",
        "nome": "annanda",
     },
     3: {
-        "imagem": "https://raw.githubusercontent.com/annandajacobs/face_recognition_img/refs/heads/luana/images/pessoa3.jpg",
+        "imagem": "",
        "nome": "Ana",
     }
 }
