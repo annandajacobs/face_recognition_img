@@ -17,6 +17,10 @@ image_data = {
     3: {
         "imagem": "https://raw.githubusercontent.com/annandajacobs/face_recognition_img/refs/heads/luana/images/pessoa3.jpg",
        "nome": "Ana",
+    },
+    4:{
+        "imagem":"https://raw.githubusercontent.com/annandajacobs/face_recognition_img/refs/heads/luana/images/pessoa4.jpg",
+        "nome":"Robert",
     }
 }
 

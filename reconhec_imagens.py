@@ -6,16 +6,17 @@ import requests
 from io import BytesIO
 from PIL import Image
 
-# Função para carregar rostos conhecidos da API
 def load_known_faces():
     known_faces = []
     known_names = []
+    known_numbers = []  # Lista para armazenar os números das imagens
     # Obter a lista de imagens da API
     images_info = get_images_from_api()
 
     for image_info in images_info:
         image_url = image_info['image']
         name = image_info['nome']
+        number = image_info.get('numero', 'Desconhecido')  # Adiciona a numeração da imagem
 
         # Baixar a imagem da URL fornecida pela API
         image = get_image_from_api(image_url)
@@ -27,10 +28,11 @@ def load_known_faces():
             if encodings:  # Verifica se encontrou um rosto
                 known_faces.append(encodings[0])
                 known_names.append(name)
+                known_numbers.append(number)  # Adiciona o número da imagem
         else:
             print(f"Erro ao obter imagem de {image_url}")
     
-    return known_faces, known_names
+    return known_faces, known_names, known_numbers
 
 # Função para obter a lista de imagens e dados da API
 def get_images_from_api():
@@ -47,7 +49,7 @@ def get_images_from_api():
 # Função para capturar e identificar rostos
 def compare_image_with_known_faces(image):
     # Carrega os rostos conhecidos
-    known_faces, known_names = load_known_faces()
+    known_faces, known_names, known_numbers = load_known_faces()
     if not known_faces:
         return [{"error": "Nenhum rosto conhecido foi carregado."}]  # Retorna lista com um dicionário de erro
 
@@ -70,21 +72,24 @@ def compare_image_with_known_faces(image):
         if face_distances[best_match_index] < 0.5:  # Limite ajustável
             name = known_names[best_match_index]
             status = "Conhecido"
+            number = known_numbers[best_match_index]  # Pega o número da imagem
         else:
             name = "Desconhecido"
             status = "Desconhecido"
+            number = "Desconhecido"
 
         # Salvar o resultado em um dicionário
         results.append({
             "name": name,
-            "status": status
+            "status": status,
+            "number": number  # Inclui o número da imagem no resultado
         })
 
         # Desenhar o nome e o bounding box na imagem
         top, right, bottom, left = face_location
         color = (0, 255, 0) if status == "Conhecido" else (0, 0, 255)
         cv2.rectangle(rgb_image, (left, top), (right, bottom), color, 2)
-        cv2.putText(rgb_image, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
+        cv2.putText(rgb_image, f"{name} - {number}", (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
 
     # Mostrar ou salvar a imagem resultante
     return results
@@ -134,4 +139,4 @@ if __name__ == "__main__":
     for result in results:
         print(f"Resultados para a imagem {result['image']}:")
         for res in result['result']:
-            print(f"Nome: {res['name']}, Status: {res['status']}")
+            print(f"Nome: {res['name']}, Status: {res['status']}, Número: {res['number']}")
