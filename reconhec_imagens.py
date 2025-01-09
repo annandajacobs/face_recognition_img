@@ -1,3 +1,4 @@
+import sqlite3
 import os
 import cv2
 import face_recognition
@@ -6,49 +7,50 @@ import requests
 from io import BytesIO
 from PIL import Image
 
-# Configuração dos diretórios
-KNOWN_FACES_DIR = 'images'
-
-if not os.path.exists(KNOWN_FACES_DIR):
-    os.makedirs(KNOWN_FACES_DIR)
-
-# Função para carregar rostos conhecidos
+# Função para carregar rostos conhecidos do banco de dados
 def load_known_faces():
     known_faces = []
     known_names = []
-    for filename in os.listdir(KNOWN_FACES_DIR):
-        if filename.endswith(('.jpg', '.png')):  # Suporte a múltiplos formatos
-            name = filename.split('_')[0]  # Nome antes do "_X.jpg"
-            img_path = os.path.join(KNOWN_FACES_DIR, filename)
-            # Carregar imagem e calcular os "encodings"
-            try:
-                image = face_recognition.load_image_file(img_path)
-                encodings = face_recognition.face_encodings(image)
+    # Conectar ao banco de dados SQLite
+    conn = sqlite3.connect('meu_banco.db')  # Substitua com o caminho correto do seu banco de dados
+    cursor = conn.cursor()
+
+    try:
+        # Obter os dados da tabela users
+        cursor.execute("SELECT id, nome, urlimagem FROM users")
+        rows = cursor.fetchall()
+
+        for row in rows:
+            name = row[1]
+            image_url = row[2]
+            
+            # Baixar a imagem usando o URL armazenado no banco de dados
+            response = requests.get(image_url)
+            if response.status_code == 200:
+                image = Image.open(BytesIO(response.content))
+                image = np.array(image)
+
+                # Certificar-se de que a imagem está no formato RGB
+                image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                
+                # Obter os "encodings" do rosto
+                encodings = face_recognition.face_encodings(image_rgb)
                 if encodings:  # Verifica se encontrou um rosto
                     known_faces.append(encodings[0])
                     known_names.append(name)
-            except Exception as e:
-                print(f"Erro ao carregar a imagem {filename}: {e}")
+    except Exception as e:
+        print(f"Erro ao carregar rostos do banco de dados: {e}")
+    finally:
+        conn.close()
+
     return known_faces, known_names
 
-# Função para obter a lista de imagens e dados falsos da API Flask
-def get_images_from_api():
-    try:
-        response = requests.get('http://127.0.0.1:5000/images/lista')  # Endereço da API
-        if response.status_code == 200:
-            return response.json()['images']
-        else:
-            print(f"Erro ao obter lista de imagens. Status code: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição: {e}")
-    return []
-
-# Função para capturar e identificar rostos
+# Função para capturar e identificar rostos a partir da imagem
 def compare_image_with_known_faces(image):
-    # Carrega os rostos conhecidos
+    # Carregar os rostos conhecidos
     known_faces, known_names = load_known_faces()
     if not known_faces:
-        return [{"error": "Nenhum rosto conhecido foi carregado."}]  # Retorna lista com um dicionário de erro
+        return [{"error": "Nenhum rosto conhecido foi carregado."}]
 
     rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -59,11 +61,7 @@ def compare_image_with_known_faces(image):
     if not face_encodings:
         return [{"error": "Nenhum rosto foi detectado na imagem fornecida."}]
 
-    # Dicionário de resultados
     results = []
-
-    # Obter a lista de imagens e dados falsos da API
-    images_info = get_images_from_api()
 
     for face_encoding, face_location in zip(face_encodings, face_locations):
         # Comparação com rostos conhecidos
@@ -76,56 +74,42 @@ def compare_image_with_known_faces(image):
             name = "Desconhecido"
             status = "Desconhecido"
 
-        # Buscar dados falsos da API para a imagem reconhecida
-        image_info = next((item['data'] for item in images_info if item['image'] == f"{name}.jpg"), {})
-
         # Salvar o resultado em um dicionário
         results.append({
             "name": name,
-            "status": status,
-            "data": image_info  # Adiciona os dados falsos
+            "status": status
         })
 
-        # Desenhar o nome e o bounding box na imagem
-        top, right, bottom, left = face_location
-        color = (0, 255, 0) if status == "Conhecido" else (0, 0, 255)
-        cv2.rectangle(rgb_image, (left, top), (right, bottom), color, 2)
-        cv2.putText(rgb_image, name, (left, top - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-
-    # Mostrar ou salvar a imagem resultante
     return results
 
-# Função para carregar a imagem da API
-def get_image_from_api(image_name):
-    try:
-        response = requests.get(f'http://127.0.0.1:5000/images/{image_name}')
-        if response.status_code == 200:
-            image = Image.open(BytesIO(response.content))
-            return np.array(image)
-        else:
-            print(f"Erro ao obter imagem {image_name}. Status code: {response.status_code}")
-    except requests.exceptions.RequestException as e:
-        print(f"Erro na requisição: {e}")
-    return None
-
-# Execução principal
 if __name__ == "__main__":
-    images_info = get_images_from_api()  # Obtém a lista de imagens da API
+    # Fazer uma requisição à API para pegar o image_url
+    api_url = 'http://localhost:5000/images/lista'  # URL da sua API Flask
+    response = requests.get(api_url)
 
-    if images_info:
-        for image_info in images_info:
-            image_name = image_info['image']
-            image = get_image_from_api(image_name)  # Obtém a imagem da API
-            if image is not None:
+    if response.status_code == 200:
+        # Supondo que a API retorne uma lista de imagens e seus dados
+        images_data = response.json().get("images", [])
+        
+        # Aqui você pode iterar sobre a lista de imagens e comparar uma por uma
+        for image_data in images_data:
+            image_url = image_data.get('image')
+            image_url = f"http://localhost:5000/images/{image_url}"  # URL completa para acessar a imagem
+            
+            # Fazer o download da imagem
+            image_response = requests.get(image_url)
+            if image_response.status_code == 200:
+                image = Image.open(BytesIO(image_response.content))
+                image = np.array(image)
                 result = compare_image_with_known_faces(image)
                 
-                if isinstance(result, list) and "error" in result[0]:  # Verifica se há erro nos resultados
+                if isinstance(result, list) and "error" in result[0]:
                     print(result[0]["error"])
                 else:
-                    print(f"Resultados da análise para a imagem {image_name}:")
+                    # Exibir os resultados de forma simplificada
                     for res in result:
                         print(f"Nome: {res['name']}, Status: {res['status']}")
             else:
-                print(f"Erro ao obter a imagem {image_name}.")
+                print(f"Erro ao baixar a imagem de {image_url}.")
     else:
-        print("Erro ao obter a lista de imagens da API.")
+        print("Erro ao acessar a lista de imagens na API.")
