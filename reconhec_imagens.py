@@ -37,7 +37,7 @@ def load_known_faces():
                 encodings = face_recognition.face_encodings(image_rgb)
                 if encodings:  # Verifica se encontrou um rosto
                     known_faces.append(encodings[0])
-                    known_names.append(name)
+                    known_names.append(name)  # Armazenar apenas o nome do conhecido
     except Exception as e:
         print(f"Erro ao carregar rostos do banco de dados: {e}")
     finally:
@@ -46,7 +46,7 @@ def load_known_faces():
     return known_faces, known_names
 
 # Função para capturar e identificar rostos a partir da imagem
-def compare_image_with_known_faces(image):
+def compare_image_with_known_faces(image, image_name):
     # Carregar os rostos conhecidos
     known_faces, known_names = load_known_faces()
     if not known_faces:
@@ -74,10 +74,14 @@ def compare_image_with_known_faces(image):
             name = "Desconhecido"
             status = "Desconhecido"
 
+        # URL da imagem que está na API (mesmo para conhecido ou desconhecido)
+        image_url = f"http://localhost:5000/images/{image_name}"
+
         # Salvar o resultado em um dicionário
         results.append({
             "name": name,
-            "status": status
+            "status": status,
+            "image_url": image_url  # A URL da API será retornada em ambos os casos
         })
 
     return results
@@ -93,22 +97,22 @@ if __name__ == "__main__":
         
         # Aqui você pode iterar sobre a lista de imagens e comparar uma por uma
         for image_data in images_data:
-            image_url = image_data.get('image')
-            image_url = f"http://localhost:5000/images/{image_url}"  # URL completa para acessar a imagem
+            image_name = image_data.get('image')  # Nome da imagem
+            image_url = f"http://localhost:5000/images/{image_name}"  # URL completa da imagem para a API
             
             # Fazer o download da imagem
             image_response = requests.get(image_url)
             if image_response.status_code == 200:
                 image = Image.open(BytesIO(image_response.content))
                 image = np.array(image)
-                result = compare_image_with_known_faces(image)
+                result = compare_image_with_known_faces(image, image_name)
                 
                 if isinstance(result, list) and "error" in result[0]:
                     print(result[0]["error"])
                 else:
                     # Exibir os resultados de forma simplificada
                     for res in result:
-                        print(f"Nome: {res['name']}, Status: {res['status']}")
+                        print(f"Nome: {res['name']}, Status: {res['status']}, URL da Imagem: {res['image_url']}")
             else:
                 print(f"Erro ao baixar a imagem de {image_url}.")
     else:
