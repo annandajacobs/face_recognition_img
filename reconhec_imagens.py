@@ -124,7 +124,7 @@ if __name__ == "__main__":
                 else:
                     print(f"Resultados da análise para a imagem {image_name}:")
                     for res in result:
-                        print(f"Nome: {res['name']}, Status: {res['status']}, Dados: {res['data']}")
+                        print(f"Nome: {res['name']}, Status: {res['status']}")
             else:
                 print(f"Erro ao obter a imagem {image_name}.")
     else:
