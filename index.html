@@ -29,7 +29,12 @@
         // Impede o recarregamento da página e lida com o envio do formulário
         document.getElementById('uploadForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Impede o recarregamento da página ao enviar o formulário
+
             var formData = new FormData(this);
+            var submitButton = document.querySelector('button[type="submit"]');
+
+            // Desabilita o botão para evitar múltiplos cliques
+            submitButton.disabled = true;
 
             fetch('http://localhost:5000/upload', {
                 method: 'POST',
@@ -95,6 +100,10 @@
             .catch(error => {
                 console.error('Erro:', error);
                 document.getElementById('result').innerHTML = `<div class="alert alert-danger">Erro ao enviar a imagem</div>`;
+            })
+            .finally(() => {
+                // Reabilita o botão após o retorno da requisição
+                submitButton.disabled = false;
             });
         });
     </script>
