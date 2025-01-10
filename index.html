@@ -10,7 +10,7 @@
 <body>
     <div class="container mt-5">
         <h1>Enviar Imagem para Comparação</h1>
-        <form id="uploadForm" action="http://localhost:5000/upload" method="POST" enctype="multipart/form-data">
+        <form id="uploadForm" enctype="multipart/form-data">
             <div class="mb-3">
                 <label for="formFile" class="form-label">Escolha uma imagem para enviar</label>
                 <input class="form-control" type="file" id="formFile" name="image" required>
@@ -19,34 +19,82 @@
         </form>
 
         <div id="result" class="mt-4"></div>
+
+        <div id="recognizedData" class="mt-4">
+            <!-- A tabela será inserida aqui -->
+        </div>
     </div>
 
     <script>
-        // Form submission
+        // Impede o recarregamento da página e lida com o envio do formulário
         document.getElementById('uploadForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+            event.preventDefault(); // Impede o recarregamento da página ao enviar o formulário
             var formData = new FormData(this);
 
             fetch('http://localhost:5000/upload', {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                if (!response.ok) {
+                    // Se a resposta não for OK, lançar um erro
+                    throw new Error('Erro ao enviar a imagem');
+                }
+                return response.json(); // Converte a resposta para JSON
+            })
             .then(data => {
                 let resultDiv = document.getElementById('result');
-                resultDiv.innerHTML = '';
+                let recognizedDataDiv = document.getElementById('recognizedData');
+                resultDiv.innerHTML = ''; // Limpa qualquer conteúdo anterior
+                recognizedDataDiv.innerHTML = ''; // Limpa a tabela anterior
 
                 if (data.error) {
-                    resultDiv.innerHTML = <div class="alert alert-danger">${data.error}</div>;
+                    resultDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
                 } else {
-                    data.forEach(item => {
-                        resultDiv.innerHTML += <div class="alert alert-success">Nome: ${item.name} | Status: ${item.status}</div>;
-                    });
+                    // Verifica se há pessoas reconhecidas
+                    let recognizedPersons = data.filter(item => item.status === "Conhecido");
+
+                    if (recognizedPersons.length === 0) {
+                        // Se não houver pessoas reconhecidas, exibe um aviso
+                        resultDiv.innerHTML = `<div class="alert alert-warning">Nenhuma pessoa reconhecida na imagem.</div>`;
+                    } else {
+                        let tableHTML = `
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Nome</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">CPF</th>
+                                        <th scope="col">RG</th>
+                                        <th scope="col">Nome do Pai</th>
+                                        <th scope="col">Nome da Mãe</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                        `;
+
+                        // Adiciona os dados à tabela apenas se for reconhecido
+                        recognizedPersons.forEach(item => {
+                            tableHTML += `
+                                <tr>
+                                    <td>${item.name}</td>
+                                    <td>${item.status}</td>
+                                    <td>${item.cpf}</td>
+                                    <td>${item.rg}</td>
+                                    <td>${item.nome_pai}</td>
+                                    <td>${item.nome_mae}</td>
+                                </tr>
+                            `;
+                        });
+
+                        tableHTML += `</tbody></table>`;
+                        recognizedDataDiv.innerHTML = tableHTML;
+                    }
                 }
             })
             .catch(error => {
                 console.error('Erro:', error);
-                document.getElementById('result').innerHTML = <div class="alert alert-danger">Erro ao enviar a imagem</div>;
+                document.getElementById('result').innerHTML = `<div class="alert alert-danger">Erro ao enviar a imagem</div>`;
             });
         });
     </script>
