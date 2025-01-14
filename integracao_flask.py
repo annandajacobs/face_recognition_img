@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 import sqlite3
-import os
+import time
 import cv2
 import face_recognition
 import numpy as np
@@ -8,12 +8,16 @@ from io import BytesIO
 from PIL import Image
 import requests
 from flask_cors import CORS
+from functools import lru_cache
+import logging
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask(__name__)
 CORS(app)
 
 # Função para carregar rostos conhecidos do banco de dados
-def load_known_faces():
+@lru_cache(maxsize=1)
+def load_known_faces(page_size=100, page_num=0):
     known_faces = []
     known_names = []
     known_ids = []
@@ -27,8 +31,11 @@ def load_known_faces():
     cursor = conn.cursor()
 
     try:
-        # Obter os dados da tabela users
-        cursor.execute("SELECT id, nome, cpf, rg, nome_pai, nome_mae, urlimagem FROM users")
+        # Calcular o offset com base na página e no tamanho da página
+        offset = page_num * page_size
+
+        # Obter os dados da tabela users com LIMIT e OFFSET para paginação
+        cursor.execute("SELECT id, nome, cpf, rg, nome_pai, nome_mae, urlimagem FROM users LIMIT ? OFFSET ?", (page_size, offset))
         rows = cursor.fetchall()
 
         for row in rows:
@@ -41,7 +48,12 @@ def load_known_faces():
             nome_mae = row[5]
             
             # Baixar a imagem usando o URL armazenado no banco de dados
-            response = requests.get(image_url)
+            try:
+                response = requests.get(image_url, timeout=10)
+                response.raise_for_status()
+            except requests.exceptions.RequestException as e:
+                logging.error(f"Erro ao baixar a imagem {image_url}: {e}")
+                continue
             if response.status_code == 200:
                 image = Image.open(BytesIO(response.content))
                 image = np.array(image)
@@ -108,6 +120,14 @@ def compare_image_with_known_faces(image, image_name):
 
     return results
 
+def limpar_cache():
+    load_known_faces.cache_clear()
+    print("Cache limpo automaticamente!")
+
+scheduler = BackgroundScheduler()
+scheduler.add_job(limpar_cache, 'interval', hours=1)  # Limpeza automática a cada 1 hora
+scheduler.start()
+
 # Rota para servir imagens (para exibição no frontend)
 @app.route('/images/<filename>')
 def serve_image(filename):
@@ -121,6 +141,9 @@ def upload_image():
     image_file = request.files['image']
     if image_file.filename == '':
         return jsonify({"error": "Nenhum arquivo selecionado."}), 400
+    
+    if not image_file.content_type.startswith('image/'):
+        return jsonify({"error": "O arquivo enviado não é uma imagem válida."}), 400
 
     try:
         image = Image.open(image_file)
@@ -133,6 +156,31 @@ def upload_image():
             return jsonify(results), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+@app.route('/get_faces', methods=['GET'])
+def get_faces():
+    # Pega os parâmetros de página da requisição (default 0 para página, 100 para size)
+    page_num = int(request.args.get('page_num', 0))
+    page_size = int(request.args.get('page_size', 100))
+
+    # Chama a função de carregamento de rostos com paginação
+    known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes = load_known_faces(page_size, page_num)
+
+    # Retorna os dados paginados em formato JSON
+    return jsonify({
+        "faces": known_faces,
+        "names": known_names,
+        "ids": known_ids,
+        "cpfs": known_cpfs,
+        "rgs": known_rgs,
+        "nome_pais": known_nome_pais,
+        "nome_maes": known_nome_maes,
+    })
+
+@app.route('/refresh_faces', methods=['POST'])
+def refresh_faces():
+    load_known_faces.cache_clear()
+    return jsonify({"message": "Cache atualizado com sucesso."}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, threaded=True)
