@@ -21,6 +21,7 @@ def load_known_faces():
     known_rgs = []
     known_nome_pais = []
     known_nome_maes = []
+    known_image_urls = []  # Lista para armazenar os URLs das imagens
     
     # Conectar ao banco de dados SQLite
     conn = sqlite3.connect('meu_banco.db')
@@ -57,16 +58,17 @@ def load_known_faces():
                     known_rgs.append(rg)
                     known_nome_pais.append(nome_pai)
                     known_nome_maes.append(nome_mae)
+                    known_image_urls.append(image_url)  # Adiciona o URL da imagem à lista
     except Exception as e:
         print(f"Erro ao carregar rostos do banco de dados: {e}")
     finally:
         conn.close()
 
-    return known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes
+    return known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes, known_image_urls
 
 # Função para comparar a imagem recebida com rostos conhecidos
 def compare_image_with_known_faces(image, image_name):
-    known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes = load_known_faces()
+    known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes, known_image_urls = load_known_faces()
     if not known_faces:
         return [{"error": "Nenhum rosto conhecido foi carregado."}]
 
@@ -92,10 +94,12 @@ def compare_image_with_known_faces(image, image_name):
             rg = known_rgs[best_match_index]
             nome_pai = known_nome_pais[best_match_index]
             nome_mae = known_nome_maes[best_match_index]
+            image_url = known_image_urls[best_match_index]  # Aqui você usa o URL da imagem correta
         else:
             name = "Desconhecido"
             status = "Desconhecido"
-        
+            image_url = ""  # Caso o rosto não seja reconhecido, não há URL
+
         results.append({
             "name": name,
             "status": status,
@@ -103,7 +107,7 @@ def compare_image_with_known_faces(image, image_name):
             "rg": rg if status == "Conhecido" else "",
             "nome_pai": nome_pai if status == "Conhecido" else "",
             "nome_mae": nome_mae if status == "Conhecido" else "",
-            "image_url": f"http://localhost:5000/images/{image_name}"  # URL da imagem
+            "image_url": image_url
         })
 
     return results
