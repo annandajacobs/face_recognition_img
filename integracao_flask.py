@@ -98,7 +98,7 @@ def compare_image_with_known_faces(image, image_name):
         else:
             name = "Desconhecido"
             status = "Desconhecido"
-            image_url = ""  # Caso o rosto não seja reconhecido, não há URL
+            image_url = ""  
 
         results.append({
             "name": name,
