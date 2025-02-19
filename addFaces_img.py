@@ -3,7 +3,7 @@ import os
 import face_recognition
 
 # Configuração dos diretórios
-KNOWN_FACES_DIR = 'data/known_faces'
+KNOWN_FACES_DIR = 'images'
 
 if not os.path.exists(KNOWN_FACES_DIR):
     os.makedirs(KNOWN_FACES_DIR)
@@ -69,10 +69,10 @@ def capture_faces_for_person(img, name, cpf):
         face_image_resized = cv2.resize(face_image_gray, (150, 150))
 
         # Salvar a imagem processada
-        filename = os.path.join(KNOWN_FACES_DIR, f"{cpf}_{photo_count}.jpg")
+        filename = os.path.join(KNOWN_FACES_DIR, f"{name}_{photo_count}.jpg")
         cv2.imwrite(filename, face_image_resized)
         photo_count += 1
-        print(f"Foto {photo_count - 1} salva para {cpf}.")
+        print(f"Foto {photo_count - 1} salva para {name}.")
 
 # Execução principal
 if __name__ == "__main__":
