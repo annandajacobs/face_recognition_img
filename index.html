@@ -73,12 +73,13 @@
                                         <th scope="col">RG</th>
                                         <th scope="col">Nome do Pai</th>
                                         <th scope="col">Nome da Mãe</th>
+                                        <th scope="col">Imagem</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                         `;
 
-                        // Adiciona os dados à tabela apenas se for reconhecido
+                        // Adiciona os dados à tabela e as imagens recortadas
                         recognizedPersons.forEach(item => {
                             tableHTML += `
                                 <tr>
@@ -88,6 +89,10 @@
                                     <td>${item.rg}</td>
                                     <td>${item.nome_pai}</td>
                                     <td>${item.nome_mae}</td>
+                                    <td>
+                                        <!-- Exibe a imagem recortada se existir -->
+                                        <img src="data:image/png;base64,${item.cropped_face_base64}" alt="${item.name}" width="100">
+                                    </td>
                                 </tr>
                             `;
                         });
