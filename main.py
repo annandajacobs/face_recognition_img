@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 import sqlite3
-import time
+import base64
 import cv2
 import face_recognition
 import numpy as np
@@ -80,7 +80,7 @@ def load_known_faces(page_size=100, page_num=0):
 
 # Função para comparar a imagem recebida com rostos conhecidos
 def compare_image_with_known_faces(image, image_name):
-    known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes, known_image_urls  = load_known_faces()
+    known_faces, known_names, known_ids, known_cpfs, known_rgs, known_nome_pais, known_nome_maes, known_image_urls = load_known_faces()
     if not known_faces:
         return [{"error": "Nenhum rosto conhecido foi carregado."}]
 
@@ -107,21 +107,37 @@ def compare_image_with_known_faces(image, image_name):
             nome_pai = known_nome_pais[best_match_index]
             nome_mae = known_nome_maes[best_match_index]
             image_url = known_image_urls[best_match_index] 
+
+            # Recorta a face da imagem
+            top, right, bottom, left = face_location
+            cropped_face = image[top:bottom, left:right]
+
+            face_image_rgb = cv2.cvtColor(cropped_face, cv2.COLOR_BGR2RGB)
+
+            # Converte a face recortada para base64
+            _, buffer = cv2.imencode('.png', face_image_rgb)
+            cropped_face_bytes = buffer.tobytes()
+            cropped_face_base64 = base64.b64encode(cropped_face_bytes).decode('utf-8')  # Converte para base64
+
         else:
             name = "Desconhecido"
             status = "Desconhecido"
             image_url = "" 
-        
-        results.append({
-            "name": name,
-            "status": status,
-            "cpf": cpf if status == "Conhecido" else "",
-            "rg": rg if status == "Conhecido" else "",
-            "nome_pai": nome_pai if status == "Conhecido" else "",
-            "nome_mae": nome_mae if status == "Conhecido" else "",
-            "image_url": image_url  # URL da imagem
-        })
+            cropped_face_base64 = None
 
+        # Só adiciona informações de pessoas conhecidas
+        if status == "Conhecido":
+            results.append({
+                "name": name,
+                "status": status,
+                "cpf": cpf,
+                "rg": rg,
+                "nome_pai": nome_pai,
+                "nome_mae": nome_mae,
+                "image_url": image_url,
+                "cropped_face_base64": cropped_face_base64  # Retorna a face recortada em base64
+            })
+    
     return results
 
 def limpar_cache():
